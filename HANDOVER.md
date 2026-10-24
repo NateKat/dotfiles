@@ -1,9 +1,10 @@
-# zsh terminal setup — handover for Claude Code
+# Mac terminal & dev setup — handover for Claude Code
 
 Paste or attach this file in a Claude Code session on a new Mac and say
-"set this up". It describes the full terminal setup (Oh My Zsh, powerlevel10k,
-plugins and CLI tools) so Claude can reproduce it, and lists the steps the
-user has to do by hand.
+"set this up". It describes the full setup (iTerm2 with its profiles,
+Oh My Zsh, powerlevel10k, zsh plugins, CLI tools, Node via nvm and desktop
+apps) so Claude can reproduce it, and lists the steps the user has to do by
+hand.
 
 ## Instructions for Claude
 
@@ -17,11 +18,30 @@ user has to do by hand.
 - The Oh My Zsh installer replaces `~/.zshrc` (saving the old one as
   `~/.zshrc.pre-oh-my-zsh`). Copy anything from the old file back into the new
   one.
+- Section 3 lists optional desktop apps. Ask the user which ones they want
+  before installing.
 - Check the result with `zsh -l -i -c '...'`. A shell without a terminal may
   print `gitstatus failed to initialize` or `can't change option: zle`; that is
   expected and harmless. Only a real terminal tab tells you for sure.
 - Use a task list and report at the end what was done and what the user still
-  has to do (section 8).
+  has to do (section 11).
+
+## 0. Get this repo
+
+The iTerm2 profiles and the powerlevel10k config live next to this file.
+Clone the repo first. A public repo needs no sign-in; `gh` comes in step 2 if
+`git` isn't installed yet.
+
+```bash
+git clone https://github.com/NateKat/dotfiles.git ~/dotfiles
+```
+
+| File | What it is |
+|---|---|
+| `HANDOVER.md` | This file |
+| `p10k.zsh` | powerlevel10k prompt config → `~/.p10k.zsh` |
+| `iterm2/profiles.json` | iTerm2 profiles "Main" and "Quake" (F2 hotkey window) |
+| `zshrc` | An older (2022) zshrc for reference only. **Don't install it**; section 6 is the current setup |
 
 ## 1. Homebrew and PATH
 
@@ -36,18 +56,38 @@ take priority over the Homebrew ones. Add this at the **top** of `~/.zprofile`:
 eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
-## 2. Install packages
+## 2. Command-line tools
 
 ```bash
-brew install zsh lsd bat fzf zoxide ripgrep fd git-delta jq tlrc
+brew install zsh lsd bat fzf zoxide ripgrep fd git-delta jq tlrc \
+             gh tig htop vim
+brew install hashicorp/tap/terraform
 brew install --cask font-meslo-lg-nerd-font
 ```
 
 - `tlrc` is the official `tldr` client. The old `tldr` formula is disabled in
   Homebrew. The command is still `tldr`.
-- The MesloLGS Nerd Font is required for powerlevel10k and lsd icons.
+- The MesloLGS Nerd Font is required for powerlevel10k and lsd icons; the
+  iTerm2 profile uses it at size 18.
+- `gh`: the user signs in themselves with `gh auth login`, which also sets up
+  git credentials for GitHub.
 
-## 3. Oh My Zsh, theme and plugins
+## 3. Desktop apps (ask first)
+
+| App | Install | Notes |
+|---|---|---|
+| iTerm2 | `brew install --cask iterm2` | **Required** for section 9 |
+| Rectangle | `brew install --cask rectangle` | Window snapping. Needs Accessibility permission (user grants it) |
+| OrbStack | `brew install --cask orbstack` | Docker/Linux VMs. Adds its own line to `~/.zprofile`; keep it |
+| Docker Desktop | `brew install --cask docker-desktop` | Usually only one of OrbStack / Docker is needed; ask |
+| Obsidian | `brew install --cask obsidian` | Notes |
+| Amphetamine | Mac App Store only | Keeps the Mac awake. The user installs it from the App Store |
+
+Other apps on the old Mac, if the user wants them too: Google Chrome
+(`google-chrome`), Slack (`slack`), Zoom (`zoom`), WhatsApp (`whatsapp`),
+Microsoft PowerPoint (`microsoft-powerpoint`). All are Homebrew casks.
+
+## 4. Oh My Zsh, theme and plugins
 
 ```bash
 RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
@@ -61,7 +101,21 @@ git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting    "$ZS
 (These three are git clones, so update them with `git pull` in each folder.
 `brew upgrade` doesn't cover them.)
 
-## 4. `~/.zshrc`
+## 5. Node.js via nvm
+
+Install nvm with its official script. Check https://github.com/nvm-sh/nvm
+for the latest version; v0.40.8 was used before. The script appends the
+`NVM_DIR` lines to `~/.zshrc` itself (shown in section 6d). Then install
+Node 24 and make it the default:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"
+nvm install 24
+nvm alias default 24
+```
+
+## 6. `~/.zshrc`
 
 Start from the `~/.zshrc` the Oh My Zsh installer generates, then:
 
@@ -88,11 +142,24 @@ and the path has to be added first. Drop Docker's own
 fpath=($HOME/.docker/completions $fpath)
 ```
 
-**d. Append at the end of the file**, after the p10k line
-(`[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh`). Running `p10k configure`
-adds that line, and the "instant prompt" block at the top of the file:
+**d. powerlevel10k instant prompt.** This block goes at the **very top** of
+`~/.zshrc`:
 
 ```zsh
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+```
+
+**e. Append at the end of the file:**
+
+```zsh
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
 # Custom aliases
 alias gll="git --no-pager log -n 17 --abbrev-commit --decorate --date=short --format=tformat:'%Cgreen%h %C(yellow)%an%x09 %C(blue)%ad%Creset %C(red)%d%Creset %C(white)%s%Creset'"
 
@@ -116,9 +183,31 @@ source <(fzf --zsh)
 
 # zoxide: `z <dir>` jumps to frequent dirs, `zi` picks with fzf
 eval "$(zoxide init zsh)"
+
+# nvm (added by the nvm installer, section 5)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 ```
 
-## 5. git + delta
+**f. Private SSH aliases (not in this repo).** The old Mac had an `ezs`
+alias: an `ssh` to a cloud VM with port forwards `8001→8000`, `6001` and
+`6002`. The server IP and key file are private, so they aren't stored in
+this public repo. Ask the user whether they want it. If so, get the host and
+key path from them and add it in this shape:
+
+```zsh
+alias ezs='ssh -i ~/.ssh/<key-file> \
+  -L 8001:localhost:8000 \
+  -L 6001:localhost:6001 \
+  -L 6002:localhost:6002 \
+  ubuntu@<server-ip>'
+```
+
+Every line except the last must end in a bare `\`, with nothing after it. If
+anything follows, even a space, the lines won't join.
+
+## 7. git + delta
 
 Add these to the global git config. Don't touch existing entries such as
 credential helpers:
@@ -132,12 +221,16 @@ git config --global delta.syntax-theme Dracula
 git config --global merge.conflictStyle zdiff3
 ```
 
-## 6. powerlevel10k prompt
+## 8. powerlevel10k prompt
 
-If a `p10k.zsh` file is in this repo, copy it to `~/.p10k.zsh` and you're
-done. Otherwise the user has to run the wizard themselves, since it asks
-questions (`p10k configure` in a real terminal, after the font is set). These
-are the answers to give:
+Copy the saved config (back up any existing one first):
+
+```bash
+cp ~/dotfiles/p10k.zsh ~/.p10k.zsh
+```
+
+That's all; the wizard isn't needed. For reference, or to recreate the prompt
+with `p10k configure`, these were the answers:
 
 | Wizard question | Answer |
 |---|---|
@@ -157,45 +250,72 @@ are the answers to give:
 | Instant prompt mode | **Verbose** (recommended) |
 | Apply changes to ~/.zshrc? | **Yes** |
 
-The original config header reads:
-`nerdfont-v3 + powerline, small icons, rainbow, unicode, round separators,
-round heads, flat tails, 1 line, compact, many icons, fluent,
-transient_prompt, instant_prompt=verbose`.
+## 9. iTerm2 profiles
 
-## 7. Verify
+`iterm2/profiles.json` is an iTerm2 *dynamic profile* file with two profiles:
+
+- **Main**: the everyday profile. MesloLGS Nerd Font 18, separate colors for
+  light and dark mode, visual bell, 1,000 lines of scrollback.
+- **Quake**: a drop-down hotkey window. **F2** shows or hides it; it slides
+  in, floats above other windows, stays open when it loses focus, and keeps
+  40,000 lines of scrollback. It inherits everything else from **Main**.
+
+Install it by copying the file. iTerm2 picks it up immediately, even while
+running:
 
 ```bash
-zsh -l -i -c 'echo $ZSH_THEME; echo $plugins; whence -p jq zsh; alias ls cat gll; bindkey "^R"; type z | head -1; git config --get core.pager'
+mkdir -p ~/Library/Application\ Support/iTerm2/DynamicProfiles
+cp ~/dotfiles/iterm2/profiles.json ~/Library/Application\ Support/iTerm2/DynamicProfiles/
+```
+
+Making **Main** the default profile is a user step (section 11).
+
+## 10. Verify
+
+```bash
+zsh -l -i -c 'echo $ZSH_THEME; echo $plugins; whence -p jq zsh; alias ls cat gll; bindkey "^R"; type z | head -1; git config --get core.pager; node --version; [[ -f ~/.p10k.zsh ]] && echo p10k-ok'
+ls ~/Library/Application\ Support/iTerm2/DynamicProfiles/
 ```
 
 You should see the powerlevel10k theme, all three plugins,
 `/opt/homebrew/bin/jq` and `/opt/homebrew/bin/zsh`, the aliases,
-`fzf-history-widget` bound to `^R`, `z` defined as a function, and `delta`.
+`fzf-history-widget` bound to `^R`, `z` defined as a function, `delta`, a
+`v24.x` Node version, `p10k-ok`, and `profiles.json`.
 
-## 8. Steps the user must do by hand
+## 11. Steps the user must do by hand
 
-1. **Terminal font**: set it to **MesloLGS Nerd Font Mono**. In Terminal or
-   iTerm2: Settings → Profiles → Text → Font. In the VS Code terminal:
+1. **Sign-ins and permissions:** `gh auth login`. Grant Rectangle
+   Accessibility access when it asks. Install Amphetamine from the App Store
+   if wanted.
+2. **iTerm2 default profile:** Settings → Profiles → select **Main** → Other
+   Actions… → **Set as Default**. This also sets the font.
+3. **F2 for the Quake window:** on a MacBook keyboard F2 is screen brightness
+   by default. Either press **fn+F2**, or turn on System Settings → Keyboard →
+   Keyboard Shortcuts → Function Keys → "Use F1, F2, etc. keys as standard
+   function keys".
+4. **Other terminals:** if the user also uses Terminal.app or the VS Code
+   terminal, set the font to **MesloLGS Nerd Font Mono** there. In VS Code:
    `"terminal.integrated.fontFamily": "MesloLGS Nerd Font Mono"`.
-2. **Run `p10k configure`** in a new tab with the answers from section 6,
-   unless `p10k.zsh` was copied from this repo.
-3. **Optional: make the Homebrew zsh the login shell** (needs a password):
+5. **Optional: make the Homebrew zsh the login shell** (needs a password):
    ```bash
    echo /opt/homebrew/bin/zsh | sudo tee -a /etc/shells
    chsh -s /opt/homebrew/bin/zsh
    ```
-4. Open a new terminal tab (or `exec zsh -l`).
+6. Open a new iTerm2 tab (or `exec zsh -l`).
 
 ## Cheat sheet
 
 | Keys / command | Does |
 |---|---|
+| F2 (or fn+F2) | Show / hide the Quake drop-down terminal |
 | → (right arrow) | Accept the grey autosuggestion |
 | Ctrl-R / Ctrl-T / Alt-C | fzf: search history / pick a file (bat preview) / cd into a folder (tree preview) |
 | `z foo` / `zi` | Jump to a frequently used folder / pick one with fzf |
 | `ll`, `la`, `lt` | lsd long list / with hidden files / tree |
 | `rg pattern`, `fd name` | Fast grep / find |
 | `gll` | Last 17 commits, one line each |
+| `tig` | Browse git history in the terminal |
 | `n` / `N` in `git diff` | Jump to the next / previous file (delta) |
 | `tldr <cmd>` | Short usage examples |
+| `htop` | Process monitor |
 | `p10k configure` | Re-run the prompt wizard |
