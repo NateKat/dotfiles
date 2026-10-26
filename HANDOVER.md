@@ -41,6 +41,7 @@ git clone https://github.com/NateKat/dotfiles.git ~/dotfiles
 | `HANDOVER.md` | This file |
 | `p10k.zsh` | powerlevel10k prompt config → `~/.p10k.zsh` |
 | `iterm2/profiles.json` | iTerm2 profiles "Main" and "Quake" (F2 hotkey window) |
+| `zsh/ezyeah.zsh` | EzYeah shortcuts `tests`, `dkr`, `prod` + animated banner (section 6f) |
 | `zshrc` | An older (2022) zshrc for reference only. **Don't install it**; section 6 is the current setup |
 
 ## 1. Homebrew and PATH
@@ -190,22 +191,35 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 ```
 
-**f. Private SSH aliases (not in this repo).** The old Mac had an `ezs`
-alias: an `ssh` to a cloud VM with port forwards `8001→8000`, `6001` and
-`6002`. The server IP and key file are private, so they aren't stored in
-this public repo. Ask the user whether they want it. If so, get the host and
-key path from them and add it in this shape:
+**f. EzYeah shortcuts** (`zsh/ezyeah.zsh` in this repo). Ask the user
+whether they want them. If so:
 
-```zsh
-alias ezs='ssh -i ~/.ssh/<key-file> \
-  -L 8001:localhost:8000 \
-  -L 6001:localhost:6001 \
-  -L 6002:localhost:6002 \
-  ubuntu@<server-ip>'
-```
+1. Check that the project is cloned at `~/Documents/ezyeah`. If it's
+   somewhere else, change the `cd` paths.
+2. Ask the user for the prod **server IP** and the **SSH key file name** in
+   `~/.ssh/`. They're private, so they're kept out of this public repo as
+   `__PROD_HOST__` and `__PROD_KEY_FILE__`.
+3. Append the contents of `zsh/ezyeah.zsh` to the end of `~/.zshrc`, with
+   both placeholders filled in. Copy it; don't `source` it, since the
+   placeholders would break `prod`.
+4. Check it without connecting: `prod -G` makes ssh print its settings and
+   exit. Look for the right `hostname`, `identityfile` and three
+   `localforward` lines.
 
-Every line except the last must end in a bare `\`, with nothing after it. If
-anything follows, even a space, the lines won't join.
+| Command | Does |
+|---|---|
+| `tests` | `cd ~/Documents/ezyeah`, check out `main`, `git pull`, run `./scripts/run-tests.sh` |
+| `dkr` | `cd ~/Documents/ezyeah`, `git pull`, take down the `ezyeah` compose project, then `docker compose -f infra/compose.yml up` |
+| `prod` | Plays a ~1 s animated "EZYEAH PROD" banner, then `ssh`s to the prod VM with tunnels `8001→8000`, `6001`, `6002` (extra args go to ssh) |
+
+The banner is three lines of box-drawing letters. They sweep in from the
+left with a white spark, shaded cyan→magenta, then "PROD" flashes yellow/red
+three times. It uses 24-bit color (fine in iTerm2) and needs a UTF-8 font
+(MesloLGS NF). When output isn't a terminal, it prints the plain three
+lines with no animation.
+
+(The old Mac also had an `ezs` alias for the same ssh command; `prod`
+replaces it.)
 
 ## 7. git + delta
 
@@ -318,4 +332,5 @@ You should see the powerlevel10k theme, all three plugins,
 | `n` / `N` in `git diff` | Jump to the next / previous file (delta) |
 | `tldr <cmd>` | Short usage examples |
 | `htop` | Process monitor |
+| `tests` / `dkr` / `prod` | EzYeah: run tests / restart Docker stack / ssh to prod with banner |
 | `p10k configure` | Re-run the prompt wizard |
